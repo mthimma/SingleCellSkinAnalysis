@@ -1,0 +1,26 @@
+{
+    "id": "E54A50AA",
+    "path": "~/Projects/Araichi/SkinDataAnalysis/scripts/GSE180885_AD_HS_skinanalysis.R",
+    "project_path": "scripts/GSE180885_AD_HS_skinanalysis.R",
+    "type": "r_source",
+    "hash": "2119557092",
+    "contents": "",
+    "dirty": false,
+    "created": 1786120128543.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "76,19",
+        "scrollLine": "67"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1786196786,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1786196786106,
+    "read_only": false,
+    "read_only_alternatives": []
+}

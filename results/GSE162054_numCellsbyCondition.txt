@@ -1,0 +1,8 @@
+# |RNA_snn_res.0.05 |   AD|
+# |:----------------|----:|
+# |0                | 1179|. Fibro/Keratinocytes
+# |1                |  632| T/NK Cells
+# |2                |  341| Monocytes
+# |3                |  218| Melanocytes
+# |4                |  155| T/NK Cells
+# |5                |  112| T/NK Cells
