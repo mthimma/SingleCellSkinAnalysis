@@ -87,7 +87,7 @@ FeaturePlot(norm, c("nFeature_RNA", "percent.mt"), reduction = "umap") &
   theme_bw() &
   NoGrid()
 
-norm <- FindClusters(norm, resolution = c(0.05, 0.1, 0.2, 0.3))
+norm <- FindClusters(norm, resolution = 0.05) #c(0.05, 0.1, 0.2, 0.3))
 png("./results/GSE162054_umapcluster.png", width=480*2, height = 480*2 )
 DimPlot(norm, group.by = c("RNA_snn_res.0.05", "condition"), label = TRUE)
 dev.off()
@@ -194,4 +194,50 @@ FeaturePlot(norm, features = cts)
 dev.off()
 
 
+#Get number of cells for each cluster grouped by sample and condition
+# Assign each cell to the highest-scoring UCell cell type
+norm$celltype <- sub("_UCell$", "", cts[max.col(norm@meta.data[, cts], ties.method = "first")])
+
+tab <- norm@meta.data |> 
+  dplyr::count(celltype, seurat_clusters, orig.ident, condition) |> 
+  unite(group, seurat_clusters, orig.ident, condition, sep = "_") |> 
+  pivot_wider(
+    names_from = group,
+    values_from = n,
+    values_fill = 0
+  ) 
+
+# Convert numeric part to matrix
+mat <- as.matrix(tab[, -1])
+rownames(mat) <- tab$celltype
+# Add row and column totals
+mat <- addmargins(mat)
+
+norm@meta.data |> 
+  tabyl(celltype, condition) |> 
+  knitr::kable()
+
+# |celltype         |   AD|
+#   |:----------------|----:|
+#   |B_Cells          |   81|
+#   |Dendritic_Cells  |  105|
+#   |Endothelial      |    1|
+#   |Keratinocytes    | 1173|
+#   |Langerhans_Cells |  191|
+#   |Macrophages      |   13|
+#   |Mast_Cells       |    2|
+#   |Melanocytes      |  216|
+#   |Monocytes        |   10|
+#   |NK_Cells         |   99|
+#   |Pericytes        |    3|
+#   |Plasma_Cells     |   31|
+#   |Schwann_Cells    |    1|
+#   |Smooth_Muscle    |    1|
+#   |T_Cells          |  710|
+
+# Write to file
+write.table( mat, file = "results/GSE162054_NumofCellsByCelltypeSampleCondition.tsv", sep = "\t",
+             quote = FALSE, row.names = TRUE, col.names = TRUE)
+
+saveRDS(norm, file = "data/GSE162054_seuratobj.rds", compress = T)
 

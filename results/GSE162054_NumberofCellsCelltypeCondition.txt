@@ -1,0 +1,17 @@
+|celltype         |   AD|
+|:----------------|----:|
+|B_Cells          |   81|
+|Dendritic_Cells  |  105|
+|Endothelial      |    1|
+|Keratinocytes    | 1173|
+|Langerhans_Cells |  191|
+|Macrophages      |   13|
+|Mast_Cells       |    2|
+|Melanocytes      |  216|
+|Monocytes        |   10|
+|NK_Cells         |   99|
+|Pericytes        |    3|
+|Plasma_Cells     |   31|
+|Schwann_Cells    |    1|
+|Smooth_Muscle    |    1|
+|T_Cells          |  710|

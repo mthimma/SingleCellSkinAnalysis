@@ -87,7 +87,7 @@ FeaturePlot(norm, c("nFeature_RNA", "percent.mt"), reduction = "umap") &
   theme_bw() &
   NoGrid()
 
-norm <- FindClusters(norm, resolution = c(0.05, 0.1, 0.2, 0.3))
+norm <- FindClusters(norm, resolution = 0.05) # c(0.05, 0.1, 0.2, 0.3))
 png("./results/GSE180885_umapcluster.png", width=480*2, height = 480*2 )
 DimPlot(norm, group.by = c("RNA_snn_res.0.05", "condition"), label = TRUE)
 dev.off()
@@ -195,5 +195,52 @@ png("./results/GSE180885_FeaturePlotOfMarker.png", width=480*2, height = 480*2 )
 FeaturePlot(norm, features = cts)
 dev.off()
 
+#Get number of cells for each cluster grouped by sample and condition
+# Assign each cell to the highest-scoring UCell cell type
+norm$celltype <- sub("_UCell$", "", cts[max.col(norm@meta.data[, cts], ties.method = "first")])
+
+tab <- norm@meta.data |> 
+  dplyr::count(celltype, seurat_clusters, orig.ident, condition) |> 
+  unite(group, seurat_clusters, orig.ident, condition, sep = "_") |> 
+  pivot_wider(
+    names_from = group,
+    values_from = n,
+    values_fill = 0
+  ) 
+
+# Convert numeric part to matrix
+mat <- as.matrix(tab[, -1])
+rownames(mat) <- tab$celltype
+# Add row and column totals
+mat <- addmargins(mat)
 
 
+norm@meta.data |> 
+  tabyl(celltype, condition) |> 
+  knitr::kable()
+
+# |celltype              |    AD| Healthy|
+#   |:---------------------|-----:|-------:|
+#   |B_Cells               |   224|    1367|
+#   |Dendritic_Cells       |   105|      10|
+#   |Endothelial           |   213|       6|
+#   |Fibroblasts           |   792|       4|
+#   |Keratinocytes         | 10735|    2468|
+#   |Langerhans_Cells      |   192|      13|
+#   |Lymphatic_Endothelial |    18|       0|
+#   |Macrophages           |    17|       6|
+#   |Mast_Cells            |     2|      14|
+#   |Melanocytes           |   290|       4|
+#   |Monocytes             |  1424|      56|
+#   |NK_Cells              |   849|    3225|
+#   |Pericytes             |    48|      13|
+#   |Plasma_Cells          |   109|    1439|
+#   |Schwann_Cells         |     3|       3|
+#   |Smooth_Muscle         |   210|      13|
+#   |T_Cells               |  1265|    2534|
+#   
+# Write to file
+write.table( mat, file = "results/GSE180885_NumofCellsByCelltypeSampleCondition.tsv", sep = "\t",
+             quote = FALSE, row.names = TRUE, col.names = TRUE)
+
+saveRDS(norm, file = "data/GSE180885_seuratobj.rds", compress = T)

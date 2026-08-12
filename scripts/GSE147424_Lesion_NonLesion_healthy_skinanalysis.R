@@ -221,4 +221,31 @@ png("./results/GSE147424_FeaturePlotOfMarker.png", width=480*2, height = 480*2 )
 FeaturePlot(norm, features = cts)
 dev.off()
 
+#Get number of cells for each cluster grouped by sample and condition
+# Assign each cell to the highest-scoring UCell cell type
+norm$celltype <- sub("_UCell$", "", cts[max.col(norm@meta.data[, cts], ties.method = "first")])
 
+tab <- norm@meta.data |> 
+  dplyr::count(celltype, seurat_clusters, sample, condition) |> 
+  unite(group, seurat_clusters, sample, condition, sep = "_") |> 
+  pivot_wider(
+    names_from = group,
+    values_from = n,
+    values_fill = 0
+  ) 
+
+# Convert numeric part to matrix
+mat <- as.matrix(tab[, -1])
+rownames(mat) <- tab$celltype
+# Add row and column totals
+mat <- addmargins(mat)
+
+# Write to file
+write.table( mat, file = "results/GSE147424_NumofCellsByCelltypeSampleCondition.tsv", sep = "\t",
+                quote = FALSE, row.names = TRUE, col.names = TRUE)
+# cell_counts1 <- norm@meta.data |> 
+#                   dplyr::count(seurat_clusters, sample, condition, celltype, name = "n_cells") |> 
+#                   arrange(seurat_clusters, sample, condition, desc(n_cells))
+# 
+# cell_counts1
+saveRDS(norm, file = "data/GSE147424_seuratobj.rds", compress = T)
