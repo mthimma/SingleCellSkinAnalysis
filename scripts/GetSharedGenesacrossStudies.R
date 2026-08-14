@@ -1,7 +1,7 @@
 # Find genes shared in all four studies of Skin analysis
 
 pacman::p_load(tidyverse, janitor, scDblFinder, patchwork,
-               Seurat, UCell, scDblFinder, UpSetR)
+               Seurat, UCell, scDblFinder, UpSetR, GEOquery)
 setwd("/Users/manjulat/Projects/Araichi/SkinDataAnalysis")
 rm(list=ls())
 
@@ -35,10 +35,18 @@ sapply(expressed, length)
 # 12396        11572        13378        12149        13359 
 
 expressed |> unlist() |> unique() |> length() #15,055
+
 fromList(expressed) |> upset(order.by = "freq")
 
 tb <- expressed |> unlist() |> table()
-keep <- which(tb >= 3)  |> names() #  9982 + 2100 = (9982 + 1646 +258 +183 +13)
+
+keep <- which(tb >= 4)  |> names() #  9949 + (1490 +209+55+33+11 = 1798) = 11747
 
 seu_list_filt <- lapply(seu_list, function(obj) subset(obj, features = keep))
 
+library(GEOquery)
+meta.1 <- getGEO('GSE153760', getGPL = FALSE)[[1]] |> 
+  pData() |> 
+  remove_constant() |> 
+  select(title, ends_with(":ch1")) |> 
+  mutate(GSE="GSE153760")
