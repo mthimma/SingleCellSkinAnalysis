@@ -45,8 +45,20 @@ keep <- which(tb >= 4)  |> names() #  9949 + (1490 +209+55+33+11 = 1798) = 11747
 seu_list_filt <- lapply(seu_list, function(obj) subset(obj, features = keep))
 
 library(GEOquery)
-meta.1 <- getGEO('GSE153760', getGPL = FALSE)[[1]] |> 
-  pData() |> 
-  remove_constant() |> 
-  select(title, ends_with(":ch1")) |> 
-  mutate(GSE="GSE153760")
+
+studies <- c("GSE147424", "GSE180885", "GSE162054", "GSE153760", "GSE158432")
+
+meta_list <- lapply(studies,
+  function(x){
+    getGEO(x, getGPL = FALSE)[[1]] |> 
+      pData() |> 
+      select(title, geo_accession, ends_with(":ch1")) |>
+      rename_with(~ str_replace(., ":ch1", ""))
+  }
+)
+
+names(meta_list) <- studies
+
+bind_rows(meta_list, .id = "study") |> 
+  openxlsx::write.xlsx("sample_metadata_tmp.xlsx")
+
