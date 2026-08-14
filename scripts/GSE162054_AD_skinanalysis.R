@@ -240,4 +240,4 @@ write.table( mat, file = "results/GSE162054_NumofCellsByCelltypeSampleCondition.
              quote = FALSE, row.names = TRUE, col.names = TRUE)
 
 saveRDS(norm, file = "data/GSE162054_seuratobj.rds", compress = T)
-
+gse162054 <- readRDS("data/GSE162054_seuratobj.rds")

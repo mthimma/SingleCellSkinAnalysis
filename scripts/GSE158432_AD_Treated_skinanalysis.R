@@ -7,13 +7,13 @@ rm(list=ls())
 
 # Download data, rename and organize into folders -------------------------
 
-# Data download from https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE180885&format=file
+# Data download from https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE158432&format=file
 
-fns <- list.files("data/GSE180885/", full.names = TRUE, pattern = ".gz")
+fns <- list.files("data/GSE158432/", full.names = TRUE, pattern = ".gz")
 
 for(fn in fns){
-
-  new.fn <- sapply( strsplit(fn, split = "_"), function(x) paste0("../data/GSE180885/", x[2], "/", x[3]) )  
+  
+  new.fn <- sapply( strsplit(fn, split = "_"), function(x) paste0("data/GSE158432/", x[2], "/", x[3]) )  
   
   dir.create( dirname(new.fn), recursive = TRUE, showWarnings = FALSE )
   
@@ -23,24 +23,26 @@ for(fn in fns){
 rm(fn, fns)
 
 # Read in -----------------------------------------------------------------
-dirs <- list.files("data/GSE180885/", full.names = TRUE)
+dirs <- list.files("data/GSE158432/", full.names = TRUE)
 names(dirs) <- basename(dirs)
 
 counts <- Read10X(dirs, strip.suffix = TRUE)
-dim(counts)  # 33538 26278
+dim(counts)  # 33538 26635
 
 raw <- CreateSeuratObject(counts       = counts,
                           min.cells    = 3,
                           min.features = 200)
 
-raw         # 19195 features across 25034 samples within 1 assay 
+raw         ## 22176 features across 19379 samples within 1 assay 
 rm(counts)
 
 ## Add in extra meta study ----
-raw$study <- "Alkon_JACI2022"
+raw$study <- "AD_TmtwithIL-4Rαblockerdupilumab"
 raw$condition <- ifelse( grepl("^AD", raw$orig.ident), "AD", "Healthy" )
 
 table(raw$orig.ident)
+# AD10 AD11 AD12 AD13 AD14 AD15 AD16 AD17 AD18 AD19 
+# 1054 1499 1570 4562 2976  489 1866 2478 1942  943 
 
 ## Add in mitochondrial read ----
 grep("^MT-", rownames(raw), value = TRUE)  # mitochondrial genes
@@ -48,8 +50,7 @@ grep("^MT-", rownames(raw), value = TRUE)  # mitochondrial genes
 raw <- PercentageFeatureSet(raw,
                             pattern  = "^Mt-|^mt-|^MT-",
                             col.name = "percent.mt")
-
-png("./results/GSE180885_ViolinPlotofFeatures.png", width=480*2, height = 480*2 )
+png("./results/GSE158432_ViolinPlotofFeatures.png", width=480*2, height = 480*2 )
 VlnPlot(raw,
         features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
         pt.size  = 0, ncol     = 1) &
@@ -78,9 +79,9 @@ norm <- RunUMAP(norm,
 rm(raw, nPCs); gc()
 
 # Color the UMAP by sample and status
-png("./results/GSE180885_umapcluster_bysamplecondn.png", width=480*2, height = 480*2 )
+png("./results/GSE158432_umapcluster_bysamplecondn.png", width=480*2, height = 480*2 )
 DimPlot(norm, group.by = c("orig.ident", "condition"),
-        reduction = "umap")
+        reduction = "umap", label=TRUE)
 dev.off()
 
 # Color the UMAP by the nFeature_RNA and percent.mt
@@ -88,26 +89,26 @@ FeaturePlot(norm, c("nFeature_RNA", "percent.mt"), reduction = "umap") &
   theme_bw() &
   NoGrid()
 
-norm <- FindClusters(norm, resolution = 0.05) # c(0.05, 0.1, 0.2, 0.3))
-png("./results/GSE180885_umapcluster.png", width=480*2, height = 480*2 )
-DimPlot(norm, group.by= c("RNA_snn_res.0.05", "condition"), label = TRUE)
+norm <- FindClusters(norm, resolution = 0.1) #c(0.05, 0.1, 0.2, 0.3))
+png("./results/GSE158432_umapcluster.png", width=480*2, height = 480*2 )
+DimPlot(norm, group.by = c("RNA_snn_res.0.1", "condition", "seurat_clusters"), label = TRUE)
 dev.off()
 
 norm@meta.data |> 
-  tabyl(RNA_snn_res.0.05, condition) |> 
+  tabyl(RNA_snn_res.0.1, condition) |> 
   knitr::kable()
 
-#   |RNA_snn_res.0.05 |   AD | Healthy|
-#   |:----------------|-----:|-------:|
-#   |0                | 10445|      95| KC
-#   |1                |  1189|    5817|T/NK
-#   |2                |   646|    3020|T/NK
-#   |3                |     3|    1905|KC
-#   |4                |   784|       3|Fibrobloast
-#   |5                |   103|     326|
-#   |6                |   334|       3|
-#   |7                |   284|       1|Fibrobloast
-#   |8                |    71|       5|
+# |RNA_snn_res.0.1 |   AD|
+#   |:---------------|----:|
+#   |0               | 7266| T_cells
+#   |1               | 4318| Keratinocytes
+#   |2               | 2368| Dendritic Cells
+#   |3               | 2200| Keratinocytes, Fibroblasts
+#   |4               | 1830| Fibroblasts
+#   |5               |  735| T_cells
+#   |6               |  366|
+#   |7               |  150|
+#   |8               |  146| Dendritic Cells
 
 #Annotate the clusters
 markers <- list(
@@ -192,7 +193,7 @@ norm <- AddModuleScore_UCell(norm, markers)
 cts <- grep("_UCell", colnames(norm@meta.data), v = TRUE)
 cts
 
-png("./results/GSE180885_FeaturePlotOfMarker.png", width=480*2, height = 480*2 )
+png("./results/GSE158432_FeaturePlotOfMarker.png", width=480*2, height = 480*2 )
 FeaturePlot(norm, features = cts)
 dev.off()
 
@@ -220,28 +221,27 @@ norm@meta.data |>
   tabyl(celltype, condition) |> 
   knitr::kable()
 
-# |celltype              |    AD| Healthy|
-#   |:---------------------|-----:|-------:|
-#   |B_Cells               |   224|    1367|
-#   |Dendritic_Cells       |   105|      10|
-#   |Endothelial           |   213|       6|
-#   |Fibroblasts           |   792|       4|
-#   |Keratinocytes         | 10735|    2468|
-#   |Langerhans_Cells      |   192|      13|
-#   |Lymphatic_Endothelial |    18|       0|
-#   |Macrophages           |    17|       6|
-#   |Mast_Cells            |     2|      14|
-#   |Melanocytes           |   290|       4|
-#   |Monocytes             |  1424|      56|
-#   |NK_Cells              |   849|    3225|
-#   |Pericytes             |    48|      13|
-#   |Plasma_Cells          |   109|    1439|
-#   |Schwann_Cells         |     3|       3|
-#   |Smooth_Muscle         |   210|      13|
-#   |T_Cells               |  1265|    2534|
-#   
+# |celltype         |   AD|
+#   |:----------------|----:|
+#   |B_Cells          |  298|
+#   |Dendritic_Cells  | 1442|
+#   |Keratinocytes    | 6600|
+#   |Langerhans_Cells |  732|
+#   |Macrophages      |   94|
+#   |Mast_Cells       |   30|
+#   |Melanocytes      | 1784|
+#   |Monocytes        |  208|
+#   |NK_Cells         |  616|
+#   |Pericytes        |   26|
+#   |Plasma_Cells     |  138|
+#   |Schwann_Cells    |   23|
+#   |Smooth_Muscle    |   16|
+#   |T_Cells          | 7372|
+# 
 # Write to file
-write.table( mat, file = "results/GSE180885_NumofCellsByCelltypeSampleCondition.tsv", sep = "\t",
+write.table( mat, file = "results/GSE158432_NumofCellsByCelltypeSampleCondition.tsv", sep = "\t",
              quote = FALSE, row.names = TRUE, col.names = TRUE)
 
-saveRDS(norm, file = "data/GSE180885_seuratobj.rds", compress = T)
+saveRDS(norm, file = "data/GSE158432_seuratobj.rds", compress = T)
+
+

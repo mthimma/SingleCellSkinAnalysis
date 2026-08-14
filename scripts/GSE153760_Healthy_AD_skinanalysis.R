@@ -27,24 +27,24 @@ dirs <- list.files("data/GSE153760/rawdata/", full.names = TRUE)
 names(dirs) <- basename(dirs)
 
 counts <- Read10X(dirs, strip.suffix = TRUE)
-dim(counts)  # 33538 87219
+dim(counts)  # 33538 60584
 
 raw <- CreateSeuratObject(counts       = counts,
                           min.cells    = 3,
                           min.features = 200)
 
-raw         ## 24984 features across 76986 samples within 1 assay 
+raw         ## 24221 features across 57607 samples within 1 assay 
 rm(counts)
 
 ## Add in extra meta study ----
-raw$study <- "ADVsControl_TmtwithIL-4Rαblockerdupilumab"
+raw$study <- "ADVsControl_Rojahn_2020"
 raw$condition <- ifelse( grepl("^AD", raw$orig.ident), "AD", "Healthy" )
 
 table(raw$orig.ident)
-#AD1 AD10 AD11 AD12 AD13 AD14 AD15 AD16 AD17 AD18 AD19  AD2  AD3  AD4  AD5  AD6  AD7  AD8  HC1  HC2  HC3  HC4  HC5 
-# 4846 1054 1499 1570 4562 2976  489 1866 2478 1942  943 3803 1819 3222 5628 5104 6246 5555   87  672 2662 2103  668 
-# HC6  HC7 
-# 5455 9737 
+
+# AD1  AD2  AD3  AD4  AD5  AD6  AD7  AD8  HC1  HC2  HC3  HC4  HC5  HC6  HC7 
+# 4846 3803 1819 3222 5628 5104 6246 5555   87  672 2662 2103  668 5455 9737
+
 
 ## Add in mitochondrial read ----
 grep("^MT-", rownames(raw), value = TRUE)  # mitochondrial genes
@@ -82,8 +82,8 @@ rm(raw, nPCs); gc()
 
 # Color the UMAP by sample and status
 png("./results/GSE153760_umapcluster_bysamplecondn.png", width=480*2, height = 480*2 )
-DimPlot(norm, group.by = c("orig.ident", "condition"),
-        reduction = "umap")
+DimPlot(norm, group.by = c("orig.ident", "condition", "seurat_clusters"),
+        reduction = "umap", label = TRUE)
 dev.off()
 
 # Color the UMAP by the nFeature_RNA and percent.mt
@@ -102,16 +102,17 @@ norm@meta.data |>
 
 # |RNA_snn_res.0.1 |    AD| Healthy|
 #   |:---------------|-----:|-------:|
-#   |0               | 14918|    4136| T/NK
-#   |1               | 12762|    2522|
-#   |2               | 10042|    4373| Keratinocytes
-#   |3               |  8716|    3848| Keratinocytes
-#   |4               |  2793|     915|
-#   |5               |   878|    2801| Fibro
-#   |6               |  2512|     809| Keratinocytes
-#   |7               |  1537|     313|
-#   |8               |   733|    1015|
-#   |9               |   711|     652| Fibro
+#   |0               |  9835|    3058| Keratinocytes
+#   |1               | 10276|    2524| Dendritic Cells
+#   |2               |  6584|    4193| T_cells
+#   |3               |  3414|    5138| Keratinocytes
+#   |4               |   886|    2811| Fibroblasts
+#   |5               |  1480|     776| Keratinocytes
+#   |6               |   951|     916|
+#   |7               |   730|    1012|
+#   |8               |  1367|     309| Mast cells
+#   |9               |   700|     647| Fibroblasts
+
 
 #Annotate the clusters
 markers <- list(
@@ -200,5 +201,54 @@ png("./results/GSE153760_FeaturePlotOfMarker.png", width=480*2, height = 480*2 )
 FeaturePlot(norm, features = cts)
 dev.off()
 
+#Get number of cells for each cluster grouped by sample and condition
+# Assign each cell to the highest-scoring UCell cell type
+norm$celltype <- sub("_UCell$", "", cts[max.col(norm@meta.data[, cts], ties.method = "first")])
 
+tab <- norm@meta.data |> 
+  dplyr::count(celltype, seurat_clusters, orig.ident, condition) |> 
+  unite(group, seurat_clusters, orig.ident, condition, sep = "_") |> 
+  pivot_wider(
+    names_from = group,
+    values_from = n,
+    values_fill = 0
+  ) 
+
+# Convert numeric part to matrix
+mat <- as.matrix(tab[, -1])
+rownames(mat) <- tab$celltype
+# Add row and column totals
+mat <- addmargins(mat)
+
+
+norm@meta.data |> 
+  tabyl(celltype, condition) |> 
+  knitr::kable()
+
+# |celltype              |    AD| Healthy|
+#   |:---------------------|-----:|-------:|
+#   |B_Cells               |  1254|     801|
+#   |Dendritic_Cells       |  4912|    1206|
+#   |Endothelial           |   414|     613|
+#   |Fibroblasts           |   866|    2780|
+#   |Keratinocytes         | 15215|    9066|
+#   |Langerhans_Cells      |  1099|     377|
+#   |Lymphatic_Endothelial |    20|     147|
+#   |Macrophages           |  1715|     618|
+#   |Mast_Cells            |  1147|     315|
+#   |Melanocytes           |   941|     915|
+#   |Monocytes             |  2495|     124|
+#   |NK_Cells              |   524|     310|
+#   |Pericytes             |    79|      61|
+#   |Plasma_Cells          |   221|     264|
+#   |Schwann_Cells         |     8|      15|
+#   |Smooth_Muscle         |   603|     648|
+#   |T_Cells               |  4710|    3124|
+#   
+#xxxxxxx
+# Write to file
+write.table( mat, file = "results/GSE153760_NumofCellsByCelltypeSampleCondition.tsv", sep = "\t",
+             quote = FALSE, row.names = TRUE, col.names = TRUE)
+
+saveRDS(norm, file = "data/GSE153760_seuratobj.rds", compress = T)
 

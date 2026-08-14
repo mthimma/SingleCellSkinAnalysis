@@ -249,3 +249,4 @@ write.table( mat, file = "results/GSE147424_NumofCellsByCelltypeSampleCondition.
 # 
 # cell_counts1
 saveRDS(norm, file = "data/GSE147424_seuratobj.rds", compress = T)
+gse147424 <- readRDS("data/GSE147424_seuratobj.rds")
